@@ -28,9 +28,12 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
         'qr-reader',
         { 
           fps: 10,
-          qrbox: { width: 250, height: 250 },
+          qrbox: { width: 200, height: 200 },
           aspectRatio: 1.0,
           showTorchButtonIfSupported: true,
+          videoConstraints: {
+            facingMode: { exact: "environment" }, // Use back camera
+          },
         },
         false
       );
@@ -165,8 +168,34 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="aspect-square bg-gray-50 rounded-lg overflow-hidden">
-                <div id="qr-reader" className="w-full h-full"></div>
+              <div className="aspect-square bg-black rounded-lg overflow-hidden relative">
+                <div id="qr-reader" className="w-full h-full">
+                  <style jsx global>{`
+                    #qr-reader__dashboard_section_swaplink {
+                      display: none !important;
+                    }
+                    #qr-reader__scan_region {
+                      position: relative !important;
+                      min-height: 300px !important;
+                      background: transparent !important;
+                    }
+                    #qr-reader__scan_region > img {
+                      display: none !important;
+                    }
+                    video {
+                      width: 100% !important;
+                      height: 100% !important;
+                      object-fit: cover !important;
+                    }
+                    #qr-reader__dashboard_section_csr button {
+                      padding: 8px 16px !important;
+                      background-color: #1e40af !important;
+                      color: white !important;
+                      border-radius: 6px !important;
+                      margin-top: 8px !important;
+                    }
+                  `}</style>
+                </div>
               </div>
 
               <Button
