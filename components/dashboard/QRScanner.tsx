@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertCircle, CheckCircle, QrCode, Camera, Link } from 'lucide-react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 
 interface QRScannerProps {
   onClose: () => void;
@@ -20,47 +20,39 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
   const [loading, setLoading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
-  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
 
   useEffect(() => {
     if (isScanning) {
-      scannerRef.current = new Html5QrcodeScanner(
-        'qr-reader',
-        { 
-          fps: 10,
-          qrbox: { width: 200, height: 200 },
-          aspectRatio: 1.0,
-          showTorchButtonIfSupported: true,
-          videoConstraints: {
-            facingMode: "environment", // Prefer back camera but don't require it
-          },
-        },
-        false
-      );
+      scannerRef.current = new Html5Qrcode('qr-reader');
       
-      scannerRef.current.render(
+      scannerRef.current.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+        },
         (decodedText) => {
           handleQrResult(decodedText);
           if (scannerRef.current) {
-            scannerRef.current.clear();
+            scannerRef.current.stop();
           }
         },
-        (error) => {
-          console.log(error);
-          // If there's a camera error, show the URL input option
-          if (error.includes('NotAllowedError') || error.includes('NotFoundError') || error.includes('NotReadableError')) {
-            setIsScanning(false);
-            setShowUrlInput(true);
-            setError('Camera access failed. You can manually enter the QR code URL instead.');
-          }
-          // Other errors during scanning can be ignored
+        (errorMessage) => {
+          console.log(errorMessage);
+        }
+      ).catch((err) => {
+        console.error(err);
+        setIsScanning(false);
+        setShowUrlInput(true);
+        setError('Camera access failed. You can manually enter the QR code URL instead.');
         }
       );
     }
 
     return () => {
       if (scannerRef.current) {
-        scannerRef.current.clear();
+        scannerRef.current.stop().catch(console.error);
       }
     };
   }, [isScanning]);
@@ -177,27 +169,17 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
               <div className="aspect-square bg-black rounded-lg overflow-hidden relative">
                 <div id="qr-reader" className="w-full h-full">
                   <style jsx global>{`
-                    #qr-reader__dashboard_section_swaplink {
-                      display: none !important;
-                    }
-                    #qr-reader__scan_region {
-                      position: relative !important;
+                    #qr-reader {
+                      width: 100% !important;
+                      height: 100% !important;
                       min-height: 300px !important;
-                      background: transparent !important;
                     }
-                    #qr-reader__scan_region > img {
-                      display: none !important;
-                    }
-                    video {
+                    #qr-reader video {
                       width: 100% !important;
                       height: 100% !important;
                       object-fit: cover !important;
+                      border-radius: 8px !important;
                     }
-                    #qr-reader__dashboard_section_csr button {
-                      padding: 8px 16px !important;
-                      background-color: #1e40af !important;
-                      color: white !important;
-                      border-radius: 6px !important;
                       margin-top: 8px !important;
                     }
                   `}</style>
