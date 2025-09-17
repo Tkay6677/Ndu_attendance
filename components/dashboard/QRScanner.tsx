@@ -32,7 +32,7 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
           aspectRatio: 1.0,
           showTorchButtonIfSupported: true,
           videoConstraints: {
-            facingMode: { exact: "environment" }, // Use back camera
+            facingMode: "environment", // Prefer back camera but don't require it
           },
         },
         false
@@ -47,7 +47,13 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
         },
         (error) => {
           console.log(error);
-          // Ignore errors during scanning
+          // If there's a camera error, show the URL input option
+          if (error.includes('NotAllowedError') || error.includes('NotFoundError') || error.includes('NotReadableError')) {
+            setIsScanning(false);
+            setShowUrlInput(true);
+            setError('Camera access failed. You can manually enter the QR code URL instead.');
+          }
+          // Other errors during scanning can be ignored
         }
       );
     }
