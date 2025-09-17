@@ -21,39 +21,53 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
   const [isScanning, setIsScanning] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const isScanningRef = useRef(false);
+
+  const stopScanner = async () => {
+    try {
+      if (scannerRef.current && isScanningRef.current) {
+        await scannerRef.current.stop();
+        isScanningRef.current = false;
+      }
+    } catch (error) {
+      console.error('Error stopping scanner:', error);
+    }
+  };
 
   useEffect(() => {
-    if (isScanning) {
-      scannerRef.current = new Html5Qrcode('qr-reader');
-      
-      scannerRef.current.start(
-        { facingMode: "environment" },
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-        },
-        (decodedText) => {
-          handleQrResult(decodedText);
-          if (scannerRef.current) {
-            scannerRef.current.stop();
+    const startScanner = async () => {
+      if (!isScanning) return;
+
+      try {
+        scannerRef.current = new Html5Qrcode('qr-reader');
+        isScanningRef.current = true;
+        
+        await scannerRef.current.start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+          },
+          async (decodedText) => {
+            await stopScanner();
+            handleQrResult(decodedText);
+          },
+          (errorMessage) => {
+            console.log(errorMessage);
           }
-        },
-        (errorMessage) => {
-          console.log(errorMessage);
-        }
-      ).catch((err) => {
+        );
+      } catch (err) {
         console.error(err);
         setIsScanning(false);
         setShowUrlInput(true);
         setError('Camera access failed. You can manually enter the QR code URL instead.');
-        }
-      );
-    }
+      }
+    };
+
+    startScanner();
 
     return () => {
-      if (scannerRef.current) {
-        scannerRef.current.stop().catch(console.error);
-      }
+      stopScanner();
     };
   }, [isScanning]);
 
@@ -180,8 +194,6 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
                       object-fit: cover !important;
                       border-radius: 8px !important;
                     }
-                      margin-top: 8px !important;
-                    }
                   `}</style>
                 </div>
               </div>
@@ -189,11 +201,9 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => {
+                onClick={async () => {
+                  await stopScanner();
                   setIsScanning(false);
-                  if (scannerRef.current) {
-                    scannerRef.current.clear();
-                  }
                 }}
                 className="w-full"
                 disabled={loading}
